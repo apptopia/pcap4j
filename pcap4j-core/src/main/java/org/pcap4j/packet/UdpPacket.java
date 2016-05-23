@@ -13,6 +13,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
+import org.pcap4j.packet.factory.PacketFactory;
 import org.pcap4j.packet.factory.PacketFactories;
 import org.pcap4j.packet.namednumber.IpNumber;
 import org.pcap4j.packet.namednumber.UdpPort;
@@ -66,9 +67,18 @@ public final class UdpPacket extends AbstractPacket {
     }
 
     if (payloadLength != 0) { // payloadLength is positive.
-      this.payload
-        = PacketFactories.getFactory(Packet.class, UdpPort.class)
-            .newInstance(rawData, offset + header.length(), payloadLength, header.getDstPort());
+      PacketFactory<Packet, UdpPort> factory = PacketFactories.getFactory(Packet.class, UdpPort.class);
+      Class<? extends Packet> class4UnknownPort = factory.getTargetClass();
+      Class<? extends Packet> class4DstPort = factory.getTargetClass(header.getDstPort());
+      UdpPort serverPort;
+      if (class4DstPort.equals(class4UnknownPort)) {
+        serverPort = header.getSrcPort();
+      }
+      else {
+        serverPort = header.getDstPort();
+      }
+
+      this.payload = factory.newInstance(rawData, offset + header.length(), payloadLength, serverPort);
     }
     else {
       this.payload = null;
